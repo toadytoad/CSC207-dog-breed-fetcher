@@ -15,8 +15,10 @@ import java.util.*;
  * exceptions to align with the requirements of the BreedFetcher interface.
  */
 public class DogApiBreedFetcher implements BreedFetcher {
-    private final OkHttpClient client = new OkHttpClient();
-
+    private final OkHttpClient client = new OkHttpClient().newBuilder().build();
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String STATUS_CODE = "status";
     /**
      * Fetch the list of sub breeds for the given breed from the dog.ceo API.
      * @param breed the breed to fetch sub breeds for
@@ -25,11 +27,26 @@ public class DogApiBreedFetcher implements BreedFetcher {
      */
     @Override
     public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+        final Request request = new Request.Builder()
+                .url(String.format("https://dog.ceo/api/breed/%s/list", breed))
+                .addHeader(CONTENT_TYPE, APPLICATION_JSON)
+                .build();
+        List<String> result = new ArrayList<>();
+        try {
+            final Response response = client.newCall(request).execute();
+            final JSONObject responseBody = new JSONObject(Objects.requireNonNull(response.body()).string());
+            if (responseBody.getString(STATUS_CODE).equals("success")) {
+                final JSONArray subBreeds = responseBody.getJSONArray("message");
+                for (int i = 0; i<subBreeds.length(); i++) {
+                    result.add(subBreeds.getString(i));
+                }
+            }
+            else {
+                throw new BreedNotFoundException(breed);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 }
